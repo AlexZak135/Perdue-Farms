@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 16, 2025
+# Date: June 17, 2025
 
 # Part 1: Setup and Configuration
 
@@ -21,27 +21,22 @@ tms, dc, otht = (
     )
 
 tms = (
-    tms.rename({"driver_#": "driver_number"})
+    tms.rename({"driver_#": "driver_number", 
+                "#_of_stops": "number_of_stops"})
+       .filter((pl.col("carrier_name") == "Perdue") & 
+               (pl.col("number_of_stops") == 1))
        .with_columns(
            *[pl.col(c).cast(pl.Utf8).str.zfill(6) if c == "driver_number" 
-             else pl.col(c).cast(pl.Utf8) 
-             for c in ["shipment_number", "driver_number"]],
-           *[pl.col(c).str.replace(r"^St ", "St. ")
-             for c in ["pickup_city", "dropoff_city"]]
-      ).with_columns(
-           pl.col("dropoff_city").str.replace_many(
-               ["LINDEN", "mankato", "N Dartmouth", "S Portland", 
-                "Warrensville Ht"],
-               ["Linden", "Mankato", "North Dartmouth", "South Portland", 
-                "Warrensville Heights"]
-               ),
+             else pl.col(c).cast(pl.Utf8).alias(c)
+             for c in ["shipment_number", "driver_number"]], 
+           pl.col("pickup_city").str.replace(r"^St ", "St. ")
+             .alias("pickup_city"),
+           pl.col("dropoff_city").str.replace("LINDEN", "Linden")
+             .alias("dropoff_city"),
            (pl.col("pickup_depart_date") + " " + 
             pl.col("pickup_depart_time")).str.strptime(pl.Datetime, 
                                                        "%Y-%m-%d %H:%M:%S")
               .alias("pickup_timestamp") 
-      ).filter(pl.col("carrier_name") == "Perdue")
-       .drop("carrier_name", "pickup_id", "pickup_depart_date", 
-             "pickup_depart_time")
+      ).drop("carrier_name", "pickup_id", "pickup_depart_date", 
+             "pickup_depart_time", "number_of_stops")
     )
-
-print(list(zip(tms.columns, tms.dtypes)))
