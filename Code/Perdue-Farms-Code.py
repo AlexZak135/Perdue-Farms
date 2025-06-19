@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 17, 2025
+# Date: June 18, 2025
 
 # Part 1: Setup and Configuration
 
@@ -20,7 +20,8 @@ tms, dc, otht = (
                   "On-Time-Held-Time-Data.parquet"]]
     )
 
-tms = (
+# Rename columns, filter, modify values in columns, and create a new column
+combined = (
     tms.rename({"driver_#": "driver_number", 
                 "#_of_stops": "number_of_stops"})
        .filter((pl.col("carrier_name") == "Perdue") & 
@@ -36,7 +37,17 @@ tms = (
            (pl.col("pickup_depart_date") + " " + 
             pl.col("pickup_depart_time")).str.strptime(pl.Datetime, 
                                                        "%Y-%m-%d %H:%M:%S")
-              .alias("pickup_timestamp") 
+              .alias("pickup_timestamp")       
+      # Drop the columns and perform an inner join 
       ).drop("carrier_name", "pickup_id", "pickup_depart_date", 
              "pickup_depart_time", "number_of_stops")
+       .join((
+           # Rename columns, modify values in a column, and drop a column
+           dc.rename({"gen3,shipment_number": "shipment_number", 
+                      "customer": "dropoff_id"})
+             .with_columns(
+                 pl.col("shipment_number").str.replace(r"^S000", "")
+                   .alias("shipment_number")
+                 ).drop("gen5,location")),
+             on = ["shipment_number", "dropoff_id"], how = "left")
     )
