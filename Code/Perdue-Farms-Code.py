@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 18, 2025
+# Date: June 23, 2025
 
 # Part 1: Setup and Configuration
 
@@ -50,4 +50,33 @@ combined = (
                    .alias("shipment_number")
                  ).drop("gen5,location")),
              on = ["shipment_number", "dropoff_id"], how = "left")
+    )
+
+otht = (
+    otht.rename({"load_#": "shipment_number", 
+                 "late?_(yes/no)": "late",
+                 "sold_to": "dropoff_id"})
+        .filter(pl.col("carrier_name") == "Perdue")
+        .with_columns(
+            *[pl.col(c).cast(pl.Utf8).alias(c) 
+              for c in ["shipment_number", "dropoff_id"]],
+            *[(pl.col(f"{p}_date").dt.date().cast(pl.Utf8) + " " +
+               pl.col(f"{p}_time").dt.time().cast(pl.Utf8)).str.strptime(
+                   pl.Datetime, "%Y-%m-%d %H:%M:%S"
+                   )
+               .alias(f"{p}_timestamp")
+            for p in ["sched_arrive", "actual_arrive", "empty"]
+      ]).with_columns(
+            pl.when(pl.col("actual_arrive_timestamp") - 
+                    pl.col("sched_arrive_timestamp") 
+                    > pl.duration(minutes = 30))
+               .then(pl.lit("Yes"))
+               .otherwise(pl.lit("No"))
+               .alias("late"), 
+            (pl.col("empty_timestamp") - 
+             pl.col("actual_arrive_timestamp")).dt.total_minutes()
+              .alias("held")
+       ).drop("carrier_name", "sched_arrive_date", "sched_arrive_time", 
+              "actual_arrive_date", "actual_arrive_time", "empty_date", 
+              "empty_time")
     )
