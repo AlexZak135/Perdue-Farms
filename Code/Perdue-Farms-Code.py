@@ -1,12 +1,15 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 24, 2025
+# Date: June 25, 2025
 
 # Part 1: Setup and Configuration
 
 # Load to import, clean, and wrangle data
 import os 
 import polars as pl
+
+# Load to produce data visualizations
+from plotnine import *
 
 # Set working directory
 os.chdir("/Users/atz5/Desktop/Perdue-Farms/Data") 
@@ -80,9 +83,16 @@ combined = (
                        .alias("minutes_held")
               ).drop("carrier_name", "sched_arrive_date", "sched_arrive_time", 
                      "actual_arrive_date", "actual_arrive_time", "empty_date", 
-                     "empty_time")
+                     "empty_time", "held")
            ), on = ["shipment_number", "dropoff_id"], how = "left")
        
        # Drop rows with null values and reorder the columns
        .drop_nulls()
+       .select("shipment_number", "driver_number", "pickup_city", 
+               "pickup_state", "pickup_timestamp", "dropoff_id", "dropoff_city",
+               "dropoff_state", "sched_arrive_timestamp", 
+               "actual_arrive_timestamp", "empty_timestamp", "pounds_shipped",
+               "direct_load_cost", "late", "minutes_held")
     )
+
+# Part 3: Data Visualization
