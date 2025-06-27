@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 25, 2025
+# Date: June 26, 2025
 
 # Part 1: Setup and Configuration
 
@@ -95,4 +95,27 @@ combined = (
                "direct_load_cost", "late", "minutes_held")
     )
 
+savings = (
+    combined.select("dropoff_id", "minutes_held") 
+            .with_columns(
+                (pl.col("minutes_held") * (65 / 60) - 25).alias("savings"),
+                )
+            .drop("minutes_held")
+            .group_by("dropoff_id")
+            .agg(pl.len().alias("deliveries"), 
+                 pl.col("savings").sum().round().alias("savings")) 
+            .with_columns(
+                (pl.col("dropoff_id") + " (n = " + 
+                 pl.col("deliveries").cast(pl.Utf8) + ")").alias("dropoff_id")
+                )
+            .drop("deliveries")
+            .sort("savings", descending = True)
+            .limit(10)       
+    )
+
 # Part 3: Data Visualization
+
+(ggplot(savings, aes(x = "dropoff_id", y = "savings")) +
+   geom_col() +
+   coord_flip() + 
+   theme_538())
