@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 26, 2025
+# Date: June 27, 2025
 
 # Part 1: Setup and Configuration
 
@@ -9,6 +9,8 @@ import os
 import polars as pl
 
 # Load to produce data visualizations
+from mizani.formatters import label_dollar
+import numpy as np
 from plotnine import *
 
 # Set working directory
@@ -104,18 +106,20 @@ savings = (
             .group_by("dropoff_id")
             .agg(pl.len().alias("deliveries"), 
                  pl.col("savings").sum().round().alias("savings")) 
-            .with_columns(
-                (pl.col("dropoff_id") + " (n = " + 
-                 pl.col("deliveries").cast(pl.Utf8) + ")").alias("dropoff_id")
-                )
-            .drop("deliveries")
             .sort("savings", descending = True)
             .limit(10)       
     )
 
 # Part 3: Data Visualization
 
-(ggplot(savings, aes(x = "dropoff_id", y = "savings")) +
-   geom_col() +
-   coord_flip() + 
-   theme_538())
+# Create a bar chart to display sums
+(
+  ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
+    geom_col(fill = "#005288") +
+    scale_y_continuous(breaks = np.linspace(0, 120000, 4), 
+                       labels = label_dollar(accuracy = 1, big_mark = ",")) +
+    labs(title = "Figure 1: Top Customers by Savings from Drop Trailer Usage", 
+         x = "Customer ID", y = "") +
+    coord_flip() +
+    theme_538()
+  ) 
