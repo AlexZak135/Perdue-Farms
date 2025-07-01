@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 27, 2025
+# Date: June 30, 2025
 
 # Part 1: Setup and Configuration
 
@@ -97,22 +97,40 @@ combined = (
                "direct_load_cost", "late", "minutes_held")
     )
 
-savings = (
-    combined.select("dropoff_id", "minutes_held") 
-            .with_columns(
-                (pl.col("minutes_held") * (65 / 60) - 25).alias("savings"),
-                )
-            .drop("minutes_held")
-            .group_by("dropoff_id")
-            .agg(pl.len().alias("deliveries"), 
-                 pl.col("savings").sum().round().alias("savings")) 
-            .sort("savings", descending = True)
-            .limit(10)       
-    )
 
+
+
+
+# Concatenate the dataframes vertically
+savings = (
+    pl.concat([
+        # Select columns, calculate means, sort rows, and keep the first 10 rows 
+        (combined.select("dropoff_id", "minutes_held") 
+                 .with_columns(
+                     (pl.col("minutes_held") * (65 / 60) - 25).alias("savings")
+                     ) 
+                 .group_by("dropoff_id")     
+                 .agg(pl.col("savings").mean().round().alias("savings"), 
+                      pl.lit("mean").alias("statistic")) 
+                 .sort("savings", descending = True) 
+                 .limit(10)),
+        # Select columns, calculate sums, sort rows, and keep the first 10 rows
+        (combined.select("dropoff_id", "minutes_held") 
+                 .with_columns(
+                     (pl.col("minutes_held") * (65 / 60) - 25).alias("savings")
+                     ) 
+                 .group_by("dropoff_id") 
+                 .agg(pl.col("savings").sum().round().alias("savings"),
+                      pl.lit("sum").alias("statistic")) 
+                 .sort("savings", descending = True)
+                 .limit(10))
+        ], how = "vertical")
+    )
+            
 # Part 3: Data Visualization
 
-# Create a bar chart to display sums
+# Create a bar chart to display summary statistics
+
 (
   ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
     geom_col(fill = "#005288") +
