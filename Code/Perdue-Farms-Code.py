@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: June 30, 2025
+# Date: July 1, 2025
 
 # Part 1: Setup and Configuration
 
@@ -13,6 +13,35 @@ from mizani.formatters import label_dollar
 import numpy as np
 from plotnine import *
 
+# Define a function to generate the summary statistics
+def savings_ss(df, summary_statistic):
+    # Select columns, create a new column, and group by a column
+    df = (
+        df.select("dropoff_id", "minutes_held") 
+          .with_columns(
+              (pl.col("minutes_held") * (65 / 60) - 25).alias("savings")
+              ) 
+          .group_by("dropoff_id")
+        )
+    
+    # Calculate the summary statistics
+    if summary_statistic == "mean":
+        df = df.agg(pl.col("savings").mean().round().alias("savings"))
+    elif summary_statistic == "sum": 
+        df = df.agg(pl.col("savings").sum().round().alias("savings")) 
+    
+    # Create a new column, sort rows, and keep the first 10 rows
+    df = (
+        df.with_columns(
+            pl.lit(summary_statistic).alias("statistic")
+            )
+          .sort("savings", descending = True) 
+          .limit(10)
+        )
+    
+    # Return the dataframes
+    return df
+               
 # Set working directory
 os.chdir("/Users/atz5/Desktop/Perdue-Farms/Data") 
 
@@ -97,39 +126,15 @@ combined = (
                "direct_load_cost", "late", "minutes_held")
     )
 
-
-
-
-
 # Concatenate the dataframes vertically
-savings = (
-    pl.concat([
-        # Select columns, calculate means, sort rows, and keep the first 10 rows 
-        (combined.select("dropoff_id", "minutes_held") 
-                 .with_columns(
-                     (pl.col("minutes_held") * (65 / 60) - 25).alias("savings")
-                     ) 
-                 .group_by("dropoff_id")     
-                 .agg(pl.col("savings").mean().round().alias("savings"), 
-                      pl.lit("mean").alias("statistic")) 
-                 .sort("savings", descending = True) 
-                 .limit(10)),
-        # Select columns, calculate sums, sort rows, and keep the first 10 rows
-        (combined.select("dropoff_id", "minutes_held") 
-                 .with_columns(
-                     (pl.col("minutes_held") * (65 / 60) - 25).alias("savings")
-                     ) 
-                 .group_by("dropoff_id") 
-                 .agg(pl.col("savings").sum().round().alias("savings"),
-                      pl.lit("sum").alias("statistic")) 
-                 .sort("savings", descending = True)
-                 .limit(10))
-        ], how = "vertical")
-    )
-            
+savings = pl.concat([combined.pipe(savings_ss, "mean"), 
+                     combined.pipe(savings_ss, "sum")], how = "vertical")
+    
 # Part 3: Data Visualization
 
 # Create a bar chart to display summary statistics
+
+
 
 (
   ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
