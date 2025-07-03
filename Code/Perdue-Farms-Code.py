@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 1, 2025
+# Date: July 2, 2025
 
 # Part 1: Setup and Configuration
 
@@ -10,7 +10,6 @@ import polars as pl
 
 # Load to produce data visualizations
 from mizani.formatters import label_dollar
-import numpy as np
 from plotnine import *
 
 # Define a function to generate the summary statistics
@@ -24,24 +23,47 @@ def savings_ss(df, summary_statistic):
           .group_by("dropoff_id")
         )
     
-    # Calculate the summary statistics
+    # Calculate the summary statistics and create a new column
     if summary_statistic == "mean":
-        df = df.agg(pl.col("savings").mean().round().alias("savings"))
+        df = df.agg(pl.col("savings").mean().round().alias("savings"), 
+                    pl.lit("Top 10 Customers by Average Savings") 
+                      .alias("statistic"))
     elif summary_statistic == "sum": 
-        df = df.agg(pl.col("savings").sum().round().alias("savings")) 
-    
-    # Create a new column, sort rows, and keep the first 10 rows
-    df = (
-        df.with_columns(
-            pl.lit(summary_statistic).alias("statistic")
-            )
-          .sort("savings", descending = True) 
-          .limit(10)
-        )
+        df = df.agg(pl.col("savings").sum().round().alias("savings"),
+                    pl.lit("Top 10 Customers by Total Savings") 
+                      .alias("statistic"))
+                        
+    # Sort rows and keep the first 10 rows
+    df = df.sort("savings", descending = True).limit(10)
     
     # Return the dataframes
     return df
-               
+
+
+
+# Define a function to generate the summary statistics
+def time_ss(df, summary_statistic):
+    # Select columns, create a new column, and group by a column
+    df = (
+        df.select("dropoff_id", "minutes_held")
+          .with_columns(
+              ((pl.col("minutes_held") - 60) / 60).alias("time")
+              ) 
+          .group_by("dropoff_id")
+        )
+    
+    # Calculate the summary statistics and create a new column
+    if summary_statistic == "mean":
+        df = df.agg(pl.col("time").mean().round().alias("time"), 
+                    pl.lit("Top 10 Customers by Average Reduction in Hold Time") 
+                      .alias("statistic"))
+    elif summary_statistic == "sum":
+        df = df.agg(pl.col("savings").sum().round().alias("savings"),
+                    pl.lit("Top 10 Customers by Total Savings") 
+                      .alias("statistic"))
+
+
+          
 # Set working directory
 os.chdir("/Users/atz5/Desktop/Perdue-Farms/Data") 
 
@@ -133,16 +155,13 @@ savings = pl.concat([combined.pipe(savings_ss, "mean"),
 # Part 3: Data Visualization
 
 # Create a bar chart to display summary statistics
+(ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
+   geom_col(fill = "#005288") +
+   scale_y_continuous(labels = label_dollar(accuracy = 1, big_mark = ",")) +
+   labs(title = "Figure 1: Customer Savings Metrics from Drop Trailer Usage", 
+        x = "Customer ID", y = "") +
+   facet_wrap("statistic", ncol = 2, scales = "free") +
+   coord_flip() +
+   theme_538()) 
 
 
-
-(
-  ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
-    geom_col(fill = "#005288") +
-    scale_y_continuous(breaks = np.linspace(0, 120000, 4), 
-                       labels = label_dollar(accuracy = 1, big_mark = ",")) +
-    labs(title = "Figure 1: Top Customers by Savings from Drop Trailer Usage", 
-         x = "Customer ID", y = "") +
-    coord_flip() +
-    theme_538()
-  ) 
