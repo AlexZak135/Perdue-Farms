@@ -9,7 +9,7 @@ import os
 import polars as pl
 
 # Load to produce data visualizations
-from mizani.formatters import label_dollar
+from mizani.formatters import label_comma, label_dollar
 from plotnine import *
 
 # Define a function to generate the summary statistics
@@ -26,7 +26,7 @@ def held_time_ss(df, summary_statistic):
     # Calculate the summary statistics and create a new column
     if summary_statistic == "mean":
         df = df.agg(pl.col("held_time").mean().round().alias("held_time"), 
-                    pl.lit("Top 10 Customers by Average Held Time") 
+                    pl.lit("Top 10 Customers by Avg. Held Time") 
                       .alias("statistic"))
     elif summary_statistic == "sum":
         df = df.agg(pl.col("held_time").sum().round().alias("held_time"), 
@@ -54,12 +54,12 @@ def dollar_savings_ss(df, summary_statistic):
     if summary_statistic == "mean":
         df = df.agg(pl.col("dollar_savings").mean().round()
                       .alias("dollar_savings"), 
-                    pl.lit("Top 10 Customers by Average Dollar Savings") 
+                    pl.lit("Top 10 Customers by Avg. Savings") 
                       .alias("statistic"))
     elif summary_statistic == "sum": 
         df = df.agg(pl.col("dollar_savings").sum().round()
                       .alias("dollar_savings"),
-                    pl.lit("Top 10 Customers by Total Dollar Savings") 
+                    pl.lit("Top 10 Customers by Total Savings") 
                       .alias("statistic"))
                         
     # Sort rows and keep the first 10 rows
@@ -162,14 +162,25 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
 
 # Part 3: Data Visualization
 
-
-
-# Create a bar chart to display summary statistics
-(ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
-   geom_col(fill = "#005288") +
-   scale_y_continuous(labels = label_dollar(accuracy = 1, big_mark = ",")) +
-   labs(title = "Figure 1: Customer Savings Metrics from Drop Trailer Usage", 
-        x = "Customer ID", y = "") +
-   facet_wrap("statistic", ncol = 2, scales = "free") +
+# Create a faceted bar chart to display summary statistics for held time 
+(ggplot(held_time, aes(x = "reorder(dropoff_id, held_time)", y = "held_time")) +
+   geom_col(width = 0.825, fill = "#005288") +
+   scale_y_continuous(labels = label_comma()) +
+   labs(title = "Figure 2: Summary Statistics for Customer Held Time", 
+        x = "Customer ID", y = "Hours") +
+   facet_wrap(facets = "statistic", ncol = 2, scales = "free") +
    coord_flip() +
-   theme_538())
+   theme_538() + 
+   theme(panel_grid_major_y = element_blank()))
+
+# Create a faceted bar chart to display summary statistics for savings
+(ggplot(savings, aes(x = "reorder(dropoff_id, dollar_savings)", 
+                     y = "dollar_savings")) +
+   geom_col(width = 0.825, fill = "#005288") +
+   scale_y_continuous(labels = label_dollar(accuracy = 1, big_mark = ",")) +
+   labs(title = "Figure 3: Summary Statistics for Savings from Drop Trailers", 
+        x = "Customer ID", y = "Dollars") +
+   facet_wrap("statistic", ncol = 2, scales = "free") + 
+   coord_flip() +
+   theme_538() +
+   theme(panel_grid_major_y = element_blank()))
