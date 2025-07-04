@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 2, 2025
+# Date: July 4, 2025
 
 # Part 1: Setup and Configuration
 
@@ -13,57 +13,61 @@ from mizani.formatters import label_dollar
 from plotnine import *
 
 # Define a function to generate the summary statistics
-def savings_ss(df, summary_statistic):
-    # Select columns, create a new column, and group by a column
-    df = (
-        df.select("dropoff_id", "minutes_held") 
-          .with_columns(
-              (pl.col("minutes_held") * (65 / 60) - 25).alias("savings")
-              ) 
-          .group_by("dropoff_id")
-        )
-    
-    # Calculate the summary statistics and create a new column
-    if summary_statistic == "mean":
-        df = df.agg(pl.col("savings").mean().round().alias("savings"), 
-                    pl.lit("Top 10 Customers by Average Savings") 
-                      .alias("statistic"))
-    elif summary_statistic == "sum": 
-        df = df.agg(pl.col("savings").sum().round().alias("savings"),
-                    pl.lit("Top 10 Customers by Total Savings") 
-                      .alias("statistic"))
-                        
-    # Sort rows and keep the first 10 rows
-    df = df.sort("savings", descending = True).limit(10)
-    
-    # Return the dataframes
-    return df
-
-
-
-# Define a function to generate the summary statistics
-def time_ss(df, summary_statistic):
+def held_time_ss(df, summary_statistic):
     # Select columns, create a new column, and group by a column
     df = (
         df.select("dropoff_id", "minutes_held")
           .with_columns(
-              ((pl.col("minutes_held") - 60) / 60).alias("time")
+              (pl.col("minutes_held") / 60).alias("held_time")
+              ) 
+          .group_by("dropoff_id")
+        )
+           
+    # Calculate the summary statistics and create a new column
+    if summary_statistic == "mean":
+        df = df.agg(pl.col("held_time").mean().round().alias("held_time"), 
+                    pl.lit("Top 10 Customers by Average Held Time") 
+                      .alias("statistic"))
+    elif summary_statistic == "sum":
+        df = df.agg(pl.col("held_time").sum().round().alias("held_time"), 
+                    pl.lit("Top 10 Customers by Total Held Time") 
+                      .alias("statistic"))
+                  
+    # Sort rows and keep the first 10 rows
+    df = df.sort("held_time", descending = True).limit(10)
+    
+    # Return the dataframes
+    return df
+
+# Define a function to generate the summary statistics
+def dollar_savings_ss(df, summary_statistic):
+    # Select columns, create a new column, and group by a column
+    df = (
+        df.select("dropoff_id", "minutes_held") 
+          .with_columns(
+              (pl.col("minutes_held") * (65 / 60) - 25).alias("dollar_savings")
               ) 
           .group_by("dropoff_id")
         )
     
     # Calculate the summary statistics and create a new column
     if summary_statistic == "mean":
-        df = df.agg(pl.col("time").mean().round().alias("time"), 
-                    pl.lit("Top 10 Customers by Average Reduction in Hold Time") 
+        df = df.agg(pl.col("dollar_savings").mean().round()
+                      .alias("dollar_savings"), 
+                    pl.lit("Top 10 Customers by Average Dollar Savings") 
                       .alias("statistic"))
-    elif summary_statistic == "sum":
-        df = df.agg(pl.col("savings").sum().round().alias("savings"),
-                    pl.lit("Top 10 Customers by Total Savings") 
+    elif summary_statistic == "sum": 
+        df = df.agg(pl.col("dollar_savings").sum().round()
+                      .alias("dollar_savings"),
+                    pl.lit("Top 10 Customers by Total Dollar Savings") 
                       .alias("statistic"))
-
-
-          
+                        
+    # Sort rows and keep the first 10 rows
+    df = df.sort("dollar_savings", descending = True).limit(10)
+    
+    # Return the dataframes
+    return df
+        
 # Set working directory
 os.chdir("/Users/atz5/Desktop/Perdue-Farms/Data") 
 
@@ -77,7 +81,7 @@ tms, dc, otht = (
     )
 
 # Rename columns, filter, modify values in columns, and create a new column
-combined = (
+perdue_farms = (
     tms.rename({"driver_#": "driver_number", 
                 "#_of_stops": "number_of_stops"})
        .filter((pl.col("carrier_name") == "Perdue") & 
@@ -149,10 +153,16 @@ combined = (
     )
 
 # Concatenate the dataframes vertically
-savings = pl.concat([combined.pipe(savings_ss, "mean"), 
-                     combined.pipe(savings_ss, "sum")], how = "vertical")
-    
+held_time = pl.concat([perdue_farms.pipe(held_time_ss, "mean"), 
+                       perdue_farms.pipe(held_time_ss, "sum")], 
+                      how = "vertical")
+savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"), 
+                     perdue_farms.pipe(dollar_savings_ss, "sum")], 
+                    how = "vertical")
+
 # Part 3: Data Visualization
+
+
 
 # Create a bar chart to display summary statistics
 (ggplot(savings, aes(x = "reorder(dropoff_id, savings)", y = "savings")) +
@@ -162,6 +172,4 @@ savings = pl.concat([combined.pipe(savings_ss, "mean"),
         x = "Customer ID", y = "") +
    facet_wrap("statistic", ncol = 2, scales = "free") +
    coord_flip() +
-   theme_538()) 
-
-
+   theme_538())
