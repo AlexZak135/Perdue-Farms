@@ -13,6 +13,25 @@ from mizani.formatters import label_comma, label_dollar
 from plotnine import *
 
 # Define a function to generate the summary statistics
+def late_ss(df, column, number):
+    # Select columns, create a new column, and group by a column
+    df = (
+        df.select(column, "late") 
+          .group_by(column)
+          # Calculate the summary statistics, filter, and drop a column
+          .agg((pl.col("late") == "Yes").mean().alias("prop_late"),
+               pl.len().alias("deliveries"))
+          .filter(pl.col("deliveries") >= number)
+          .drop("deliveries")
+          # Sort rows and keep the first 10 rows
+          .sort("prop_late", descending = True)
+          .limit(10)
+        )
+                    
+    # Return the dataframe
+    return df
+
+# Define a function to generate the summary statistics
 def held_time_ss(df, summary_statistic):
     # Select columns, create a new column, and group by a column
     df = (
@@ -36,7 +55,7 @@ def held_time_ss(df, summary_statistic):
     # Sort rows and keep the first 10 rows
     df = df.sort("held_time", descending = True).limit(10)
     
-    # Return the dataframes
+    # Return the dataframe
     return df
 
 # Define a function to generate the summary statistics
@@ -65,7 +84,7 @@ def dollar_savings_ss(df, summary_statistic):
     # Sort rows and keep the first 10 rows
     df = df.sort("dollar_savings", descending = True).limit(10)
     
-    # Return the dataframes
+    # Return the dataframe
     return df
         
 # Set working directory
@@ -153,6 +172,9 @@ perdue_farms = (
     )
 
 # Concatenate the dataframes vertically
+late = pl.concat([late_ss(perdue_farms, "driver_number", 10), 
+                  late_ss(perdue_farms, "dropoff_id", 15)], 
+                 how = "vertical")
 held_time = pl.concat([perdue_farms.pipe(held_time_ss, "mean"), 
                        perdue_farms.pipe(held_time_ss, "sum")], 
                       how = "vertical")
