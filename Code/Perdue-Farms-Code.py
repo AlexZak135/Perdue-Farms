@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 4, 2025
+# Date: July 6, 2025
 
 # Part 1: Setup and Configuration
 
@@ -13,18 +13,20 @@ from mizani.formatters import label_comma, label_dollar
 from plotnine import *
 
 # Define a function to generate the summary statistics
-def late_ss(df, column, number):
-    # Select columns, create a new column, and group by a column
+def late_ss(df, column, text, number):
+    # Select columns, group by a column, and calculate the summary statistics
     df = (
         df.select(column, "late") 
           .group_by(column)
-          # Calculate the summary statistics, filter, and drop a column
-          .agg((pl.col("late") == "Yes").mean().alias("prop_late"),
-               pl.len().alias("deliveries"))
+          .agg((pl.col("late") == "Yes").mean().round(2).alias("prop_late"),
+               pl.len().alias("deliveries"),
+               pl.lit(f"Top 10 {text} by % Late Deliveries").alias("statistic"))
+          # Rename a column, filter, drop a column, and sort rows
+          .rename({column: "id"})
           .filter(pl.col("deliveries") >= number)
-          .drop("deliveries")
-          # Sort rows and keep the first 10 rows
+          .drop("deliveries")          
           .sort("prop_late", descending = True)
+          # Keep the first 10 rows
           .limit(10)
         )
                     
@@ -42,7 +44,7 @@ def held_time_ss(df, summary_statistic):
           .group_by("dropoff_id")
         )
            
-    # Calculate the summary statistics and create a new column
+    # Calculate the summary statistics
     if summary_statistic == "mean":
         df = df.agg(pl.col("held_time").mean().round().alias("held_time"), 
                     pl.lit("Top 10 Customers by Avg. Held Time") 
@@ -69,7 +71,7 @@ def dollar_savings_ss(df, summary_statistic):
           .group_by("dropoff_id")
         )
     
-    # Calculate the summary statistics and create a new column
+    # Calculate the summary statistics
     if summary_statistic == "mean":
         df = df.agg(pl.col("dollar_savings").mean().round()
                       .alias("dollar_savings"), 
@@ -172,8 +174,8 @@ perdue_farms = (
     )
 
 # Concatenate the dataframes vertically
-late = pl.concat([late_ss(perdue_farms, "driver_number", 10), 
-                  late_ss(perdue_farms, "dropoff_id", 15)], 
+late = pl.concat([late_ss(perdue_farms, "driver_number", "Drivers", 10), 
+                  late_ss(perdue_farms, "dropoff_id", "Customers", 15)], 
                  how = "vertical")
 held_time = pl.concat([perdue_farms.pipe(held_time_ss, "mean"), 
                        perdue_farms.pipe(held_time_ss, "sum")], 
