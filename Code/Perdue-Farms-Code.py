@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 6, 2025
+# Date: July 10, 2025
 
 # Part 1: Setup and Configuration
 
@@ -9,12 +9,12 @@ import os
 import polars as pl
 
 # Load to produce data visualizations
-from mizani.formatters import label_comma, label_dollar
+from mizani.formatters import label_comma, label_dollar, percent_format
 from plotnine import *
 
-# Define a function to generate the summary statistics
+# Define a function to generate summary statistics
 def late_ss(df, column, text, number):
-    # Select columns, group by a column, and calculate the summary statistics
+    # Select columns, group by a column, and calculate summary statistics
     df = (
         df.select(column, "late") 
           .group_by(column)
@@ -33,7 +33,11 @@ def late_ss(df, column, text, number):
     # Return the dataframe
     return df
 
-# Define a function to generate the summary statistics
+
+
+
+
+# Define a function to generate summary statistics
 def held_time_ss(df, summary_statistic):
     # Select columns, create a new column, and group by a column
     df = (
@@ -44,7 +48,7 @@ def held_time_ss(df, summary_statistic):
           .group_by("dropoff_id")
         )
            
-    # Calculate the summary statistics
+    # Calculate summary statistics
     if summary_statistic == "mean":
         df = df.agg(pl.col("held_time").mean().round().alias("held_time"), 
                     pl.lit("Top 10 Customers by Avg. Held Time") 
@@ -60,7 +64,7 @@ def held_time_ss(df, summary_statistic):
     # Return the dataframe
     return df
 
-# Define a function to generate the summary statistics
+# Define a function to generate summary statistics
 def dollar_savings_ss(df, summary_statistic):
     # Select columns, create a new column, and group by a column
     df = (
@@ -71,7 +75,7 @@ def dollar_savings_ss(df, summary_statistic):
           .group_by("dropoff_id")
         )
     
-    # Calculate the summary statistics
+    # Calculate summary statistics
     if summary_statistic == "mean":
         df = df.agg(pl.col("dollar_savings").mean().round()
                       .alias("dollar_savings"), 
@@ -185,6 +189,17 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
                     how = "vertical")
 
 # Part 3: Data Visualization
+
+# Create a faceted bar chart to display summary statistics for lateness
+(ggplot(late, aes(x = "reorder(id, prop_late)", y = "prop_late")) +
+   geom_col(width = 0.825, fill = "#005288") +
+   scale_y_continuous(labels = percent_format()) +
+   labs(title = "Figure 1: Summary Statistics for Late Deliveries", 
+        x = "ID", y = "Percentage") +
+   facet_wrap(facets = "statistic", ncol = 2, scales = "free") +
+   coord_flip() +
+   theme_538() + 
+   theme(panel_grid_major_y = element_blank()))
 
 # Create a faceted bar chart to display summary statistics for held time 
 (ggplot(held_time, aes(x = "reorder(dropoff_id, held_time)", y = "held_time")) +
