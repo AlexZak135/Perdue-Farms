@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 10, 2025
+# Date: July 13, 2025
 
 # Part 1: Setup and Configuration
 
@@ -12,7 +12,7 @@ import polars as pl
 from mizani.formatters import label_comma, label_dollar, percent_format
 from plotnine import *
 
-# Define a function to generate summary statistics
+# Define a function to generate summary statistics for lateness
 def late_ss(df, column, text, number):
     # Select columns, group by a column, and calculate summary statistics
     df = (
@@ -29,15 +29,11 @@ def late_ss(df, column, text, number):
           # Keep the first 10 rows
           .limit(10)
         )
-                    
+                      
     # Return the dataframe
     return df
 
-
-
-
-
-# Define a function to generate summary statistics
+# Define a function to generate summary statistics for held time 
 def held_time_ss(df, summary_statistic):
     # Select columns, create a new column, and group by a column
     df = (
@@ -47,7 +43,7 @@ def held_time_ss(df, summary_statistic):
               ) 
           .group_by("dropoff_id")
         )
-           
+            
     # Calculate summary statistics
     if summary_statistic == "mean":
         df = df.agg(pl.col("held_time").mean().round().alias("held_time"), 
@@ -57,14 +53,14 @@ def held_time_ss(df, summary_statistic):
         df = df.agg(pl.col("held_time").sum().round().alias("held_time"), 
                     pl.lit("Top 10 Customers by Total Held Time") 
                       .alias("statistic"))
-                  
+                      
     # Sort rows and keep the first 10 rows
     df = df.sort("held_time", descending = True).limit(10)
     
     # Return the dataframe
     return df
 
-# Define a function to generate summary statistics
+# Define a function to generate summary statistics for savings
 def dollar_savings_ss(df, summary_statistic):
     # Select columns, create a new column, and group by a column
     df = (
@@ -77,7 +73,7 @@ def dollar_savings_ss(df, summary_statistic):
     
     # Calculate summary statistics
     if summary_statistic == "mean":
-        df = df.agg(pl.col("dollar_savings").mean().round()
+        df = df.agg(pl.col("dollar_savings").mean().round() 
                       .alias("dollar_savings"), 
                     pl.lit("Top 10 Customers by Avg. Savings") 
                       .alias("statistic"))
@@ -86,7 +82,7 @@ def dollar_savings_ss(df, summary_statistic):
                       .alias("dollar_savings"),
                     pl.lit("Top 10 Customers by Total Savings") 
                       .alias("statistic"))
-                        
+                           
     # Sort rows and keep the first 10 rows
     df = df.sort("dollar_savings", descending = True).limit(10)
     
@@ -104,6 +100,8 @@ tms, dc, otht = (
      for file in ["TMS-Data.parquet", "Delivery-Cost-Data.parquet", 
                   "On-Time-Held-Time-Data.parquet"]]
     )
+
+
 
 # Rename columns, filter, modify values in columns, and create a new column
 perdue_farms = (
