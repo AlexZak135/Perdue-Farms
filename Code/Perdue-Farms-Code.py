@@ -131,17 +131,12 @@ perdue_farms = (
                    .alias("shipment_number")
                  ).drop("gen5,location")
            ), on = ["shipment_number", "dropoff_id"], how = "left")
-       
-       
-       
-       
-       
        # Perform a left join
        .join((
-           # Rename columns and filter 
+           # Rename columns and filter
            otht.rename({"load_#": "shipment_number", 
-                        "late?_(yes/no)": "late", 
-                        "sold_to": "dropoff_id"})
+                        "sold_to": "dropoff_id", 
+                        "late?_(yes/no)": "late"})
                .filter(pl.col("carrier_name") == "Perdue")
                # Modify values in columns, create new columns, and drop columns
                .with_columns(
@@ -161,14 +156,12 @@ perdue_farms = (
                      .otherwise(pl.lit("No"))
                      .alias("late"),
                    ((pl.col("empty_timestamp") - 
-                     pl.col("actual_arrive_timestamp")) 
-                       .dt.total_seconds() / 60).round(2)
+                     pl.col("actual_arrive_timestamp")).dt.total_minutes())
                        .alias("minutes_held")
               ).drop("carrier_name", "sched_arrive_date", "sched_arrive_time", 
                      "actual_arrive_date", "actual_arrive_time", "empty_date", 
                      "empty_time", "held")
            ), on = ["shipment_number", "dropoff_id"], how = "left")
-       
        # Drop rows with null values and reorder the columns
        .drop_nulls()
        .select("shipment_number", "driver_number", "pickup_city", 
@@ -179,8 +172,8 @@ perdue_farms = (
     )
 
 # Concatenate the dataframes vertically
-late = pl.concat([late_ss(perdue_farms, "driver_number", "Drivers", 10), 
-                  late_ss(perdue_farms, "dropoff_id", "Customers", 15)], 
+late = pl.concat([perdue_farms.pipe(late_ss, "driver_number", "Drivers", 10), 
+                  perdue_farms.pipe(late_ss, "dropoff_id", "Customers", 15)], 
                  how = "vertical")
 held_time = pl.concat([perdue_farms.pipe(held_time_ss, "mean"), 
                        perdue_farms.pipe(held_time_ss, "sum")], 
@@ -197,7 +190,7 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
    scale_y_continuous(labels = percent_format()) +
    labs(title = "Figure 1: Summary Statistics for Late Deliveries", 
         x = "ID", y = "Percentage") +
-   facet_wrap(facets = "statistic", ncol = 2, scales = "free") +
+   facet_wrap(facets = "statistic", ncol = 2, scales = "free") + 
    coord_flip() +
    theme_538() + 
    theme(panel_grid_major_y = element_blank()))
@@ -208,7 +201,7 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
    scale_y_continuous(labels = label_comma()) +
    labs(title = "Figure 2: Summary Statistics for Customer Held Time", 
         x = "Customer ID", y = "Hours") +
-   facet_wrap(facets = "statistic", ncol = 2, scales = "free") +
+   facet_wrap(facets = "statistic", ncol = 2, scales = "free") + 
    coord_flip() +
    theme_538() + 
    theme(panel_grid_major_y = element_blank()))
