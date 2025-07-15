@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 13, 2025
+# Date: July 14, 2025
 
 # Part 1: Setup and Configuration
 
@@ -217,3 +217,29 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
    coord_flip() +
    theme_538() +
    theme(panel_grid_major_y = element_blank()))
+
+# Part 4: Statistical Tests
+
+# Define a function to perform a correlation test between two columns
+def correlation_test(df, column1, column2):
+    # Conditionally modify the values in a column
+    if column2 == "late":
+        df = df.with_columns(
+            pl.when(pl.col("late") == "Yes")
+              .then(1)
+              .otherwise(0)
+              .alias("late")
+            )
+    
+    # Generate the correlation coefficient  
+    corr = df.select(pl.corr(column1, column2, method = "pearson")
+                       .alias("Coefficient"))
+    
+    # Return the result
+    return print(f"The correlation between {column1} and {column2} is: {corr}")
+
+# Perform the correlation tests   
+correlation_test(perdue_farms, "pounds_shipped", "late")         
+correlation_test(perdue_farms, "direct_load_cost", "late")
+correlation_test(perdue_farms, "pounds_shipped", "minutes_held")        
+correlation_test(perdue_farms, "direct_load_cost", "minutes_held")
