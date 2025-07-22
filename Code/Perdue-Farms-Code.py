@@ -1,6 +1,6 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 14, 2025
+# Date: July 21, 2025
 
 # Part 1: Setup and Configuration
 
@@ -220,26 +220,44 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
 
 # Part 4: Statistical Tests
 
-# Define a function to perform a correlation test between two columns
-def correlation_test(df, column1, column2):
-    # Conditionally modify the values in a column
-    if column2 == "late":
-        df = df.with_columns(
-            pl.when(pl.col("late") == "Yes")
-              .then(1)
-              .otherwise(0)
-              .alias("late")
-            )
-    
-    # Generate the correlation coefficient  
-    corr = df.select(pl.corr(column1, column2, method = "pearson")
-                       .alias("Coefficient"))
-    
-    # Return the result
-    return print(f"The correlation between {column1} and {column2} is: {corr}")
+import pandas as pd
+from scipy.stats import chi2_contingency, pearsonr, pointbiserialr
 
-# Perform the correlation tests   
-correlation_test(perdue_farms, "pounds_shipped", "late")         
-correlation_test(perdue_farms, "direct_load_cost", "late")
-correlation_test(perdue_farms, "pounds_shipped", "minutes_held")        
-correlation_test(perdue_farms, "direct_load_cost", "minutes_held")
+# Select columns, create new columns, and select columns
+test_inputs = (
+    perdue_farms.select("pickup_state", "pickup_timestamp", "dropoff_state", 
+                        "actual_arrive_timestamp", "pounds_shipped", 
+                        "direct_load_cost", "late", "minutes_held")
+                .with_columns(
+                    pl.when(pl.col("pickup_state") == pl.col("dropoff_state"))
+                      .then(pl.lit("Yes"))
+                      .otherwise(pl.lit("No"))
+                      .alias("same_state"),
+                    *[pl.when(pl.col(f"{p}_timestamp").dt.hour() < 12)
+                        .then(pl.lit("AM"))
+                        .otherwise(pl.lit("PM"))
+                        .alias(f"{p}_period")
+                      for p in ["pickup", "actual_arrive"]],
+                    pl.when(pl.col("late") == "Yes")
+                      .then(1)
+                      .otherwise(0)
+                      .alias("is_late")
+                    )
+                .select("same_state", "pickup_period", "actual_arrive_period", 
+                        "pounds_shipped", "direct_load_cost", "late", "is_late",
+                        "minutes_held")
+                # Convert to a Pandas dataframe
+                .to_pandas()
+    )
+
+# Perform the correlation tests
+pointbiserialr(test_inputs["pounds_shipped"], test_inputs["is_late"])
+pointbiserialr(test_inputs["direct_load_cost"], test_inputs["is_late"])
+pearsonr(test_inputs["pounds_shipped"], test_inputs["minutes_held"])
+pearsonr(test_inputs["direct_load_cost"], test_inputs["minutes_held"])
+
+# Perform the chi-squared tests
+chi2_contingency(pd.crosstab(test_inputs["same_state"], test_inputs["late"]))
+chi2_contingency(pd.crosstab(test_inputs["pickup_period"], test_inputs["late"]))
+chi2_contingency(pd.crosstab(test_inputs["actual_arrive_period"], 
+                             test_inputs["late"]))
