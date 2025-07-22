@@ -1,16 +1,20 @@
 # Title: Perdue Farms Analysis
 # Author: Alexander Zakrzeski
-# Date: July 21, 2025
+# Date: July 22, 2025
 
 # Part 1: Setup and Configuration
 
 # Load to import, clean, and wrangle data
 import os 
+import pandas as pd
 import polars as pl
 
 # Load to produce data visualizations
 from mizani.formatters import label_comma, label_dollar, percent_format
 from plotnine import *
+
+# Load to perform statistical tests
+from scipy.stats import chi2_contingency, pearsonr, pointbiserialr
 
 # Define a function to generate summary statistics for lateness
 def late_ss(df, column, text, number):
@@ -220,9 +224,6 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
 
 # Part 4: Statistical Tests
 
-import pandas as pd
-from scipy.stats import chi2_contingency, pearsonr, pointbiserialr
-
 # Select columns, create new columns, and select columns
 test_inputs = (
     perdue_farms.select("pickup_state", "pickup_timestamp", "dropoff_state", 
@@ -256,7 +257,7 @@ pointbiserialr(test_inputs["direct_load_cost"], test_inputs["is_late"])
 pearsonr(test_inputs["pounds_shipped"], test_inputs["minutes_held"])
 pearsonr(test_inputs["direct_load_cost"], test_inputs["minutes_held"])
 
-# Perform chi-squared tests
+# Perform chi-square tests
 chi2_contingency(pd.crosstab(test_inputs["same_state"], test_inputs["late"]))
 chi2_contingency(pd.crosstab(test_inputs["pickup_period"], test_inputs["late"]))
 chi2_contingency(pd.crosstab(test_inputs["actual_arrive_period"], 
