@@ -250,13 +250,13 @@ test_inputs = (
                 .to_pandas()
     )
 
-# Perform the correlation tests
+# Perform correlation tests
 pointbiserialr(test_inputs["pounds_shipped"], test_inputs["is_late"])
 pointbiserialr(test_inputs["direct_load_cost"], test_inputs["is_late"])
 pearsonr(test_inputs["pounds_shipped"], test_inputs["minutes_held"])
 pearsonr(test_inputs["direct_load_cost"], test_inputs["minutes_held"])
 
-# Perform the chi-squared tests
+# Perform chi-squared tests
 chi2_contingency(pd.crosstab(test_inputs["same_state"], test_inputs["late"]))
 chi2_contingency(pd.crosstab(test_inputs["pickup_period"], test_inputs["late"]))
 chi2_contingency(pd.crosstab(test_inputs["actual_arrive_period"], 
