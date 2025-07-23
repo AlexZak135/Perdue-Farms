@@ -186,6 +186,33 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
                      perdue_farms.pipe(dollar_savings_ss, "sum")], 
                     how = "vertical")
 
+# Select columns, create new columns, and select columns
+test_inputs = (
+    perdue_farms.select("pickup_state", "pickup_timestamp", "dropoff_state", 
+                        "actual_arrive_timestamp", "pounds_shipped", 
+                        "direct_load_cost", "late", "minutes_held")
+                .with_columns(
+                    pl.when(pl.col("pickup_state") == pl.col("dropoff_state"))
+                      .then(pl.lit("Yes"))
+                      .otherwise(pl.lit("No"))
+                      .alias("same_state"),
+                    *[pl.when(pl.col(f"{p}_timestamp").dt.hour() < 12)
+                        .then(pl.lit("AM"))
+                        .otherwise(pl.lit("PM"))
+                        .alias(f"{p}_period")
+                      for p in ["pickup", "actual_arrive"]],
+                    pl.when(pl.col("late") == "Yes")
+                      .then(1)
+                      .otherwise(0)
+                      .alias("is_late")
+                    )
+                .select("same_state", "pickup_period", "actual_arrive_period", 
+                        "pounds_shipped", "direct_load_cost", "late", "is_late",
+                        "minutes_held")
+                # Convert to a Pandas dataframe
+                .to_pandas()
+    )
+
 # Part 3: Data Visualization
 
 # Create a faceted bar chart to display summary statistics for lateness
@@ -223,33 +250,6 @@ savings = pl.concat([perdue_farms.pipe(dollar_savings_ss, "mean"),
    theme(panel_grid_major_y = element_blank()))
 
 # Part 4: Statistical Tests
-
-# Select columns, create new columns, and select columns
-test_inputs = (
-    perdue_farms.select("pickup_state", "pickup_timestamp", "dropoff_state", 
-                        "actual_arrive_timestamp", "pounds_shipped", 
-                        "direct_load_cost", "late", "minutes_held")
-                .with_columns(
-                    pl.when(pl.col("pickup_state") == pl.col("dropoff_state"))
-                      .then(pl.lit("Yes"))
-                      .otherwise(pl.lit("No"))
-                      .alias("same_state"),
-                    *[pl.when(pl.col(f"{p}_timestamp").dt.hour() < 12)
-                        .then(pl.lit("AM"))
-                        .otherwise(pl.lit("PM"))
-                        .alias(f"{p}_period")
-                      for p in ["pickup", "actual_arrive"]],
-                    pl.when(pl.col("late") == "Yes")
-                      .then(1)
-                      .otherwise(0)
-                      .alias("is_late")
-                    )
-                .select("same_state", "pickup_period", "actual_arrive_period", 
-                        "pounds_shipped", "direct_load_cost", "late", "is_late",
-                        "minutes_held")
-                # Convert to a Pandas dataframe
-                .to_pandas()
-    )
 
 # Perform correlation tests
 pointbiserialr(test_inputs["pounds_shipped"], test_inputs["is_late"])
