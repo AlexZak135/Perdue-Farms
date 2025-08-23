@@ -5,7 +5,6 @@
 # Part 1: Setup and Configuration
 
 # Load to import, clean, and wrangle data
-import os 
 import pandas as pd
 import polars as pl
 
