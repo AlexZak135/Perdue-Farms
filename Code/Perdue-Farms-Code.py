@@ -33,7 +33,7 @@ def late_ss(df, column, text, number):
           .limit(10)
         )
                       
-    # Return the dataframe
+    # Return the DataFrame
     return df
 
 # Define a function to generate summary statistics for held time 
@@ -60,7 +60,7 @@ def held_time_ss(df, summary_statistic):
     # Sort rows and keep the first 10 rows
     df = df.sort("held_time", descending = True).limit(10)
     
-    # Return the dataframe
+    # Return the DataFrame
     return df
 
 # Define a function to generate summary statistics for savings
@@ -89,7 +89,7 @@ def dollar_savings_ss(df, summary_statistic):
     # Sort rows and keep the first 10 rows
     df = df.sort("dollar_savings", descending = True).limit(10)
     
-    # Return the dataframe
+    # Return the DataFrame
     return df
         
 # Set working directory
@@ -174,7 +174,7 @@ perdue_farms = (
                "direct_load_cost", "late", "minutes_held")
     )
 
-# Concatenate the dataframes vertically
+# Concatenate the DataFrames vertically
 late = pl.concat([perdue_farms.pipe(late_ss, "driver_number", "Drivers", 10), 
                   perdue_farms.pipe(late_ss, "dropoff_id", "Customers", 15)], 
                  how = "vertical")
@@ -208,7 +208,7 @@ test_inputs = (
                 .select("same_state", "pickup_period", "actual_arrive_period", 
                         "pounds_shipped", "direct_load_cost", "late", "is_late",
                         "minutes_held")
-                # Convert to a Pandas dataframe
+                # Convert to a Pandas DataFrame
                 .to_pandas()
     )
 
